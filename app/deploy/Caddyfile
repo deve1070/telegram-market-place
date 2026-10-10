@@ -1,0 +1,14 @@
+# Caddy obtains and renews the HTTPS certificate automatically (needs the domain's DNS to point at this server
+# and ports 80/443 open). Only the webhook, the health check and the Mini App (/app, /api) are forwarded;
+# everything else is a 404.
+{$DOMAIN} {
+	encode gzip
+
+	@bot path /webhook/* /health /app /app/* /api/*
+	handle @bot {
+		reverse_proxy bot:8080
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

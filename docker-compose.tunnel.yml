@@ -1,0 +1,13 @@
+# Run the bot in PRODUCTION mode (webhook + Mini App + seller dashboard) on your own computer,
+# reachable from Telegram through a tunnel (ngrok or cloudflared) that gives it a public https address.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --build
+#
+# Needs two lines in your local .env:   TUNNEL_URL=https://<address your tunnel prints>   and   WEBHOOK_SECRET=<openssl rand -hex 24>
+# Back to normal local mode (polling):   docker compose up -d --build     (without this file)
+services:
+  bot:
+    ports: ["127.0.0.1:8080:8080"] # your tunnel program forwards to this port; nothing else is exposed
+    environment:
+      WEBHOOK_BASE_URL: ${TUNNEL_URL:?add TUNNEL_URL=https://... to .env}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?add WEBHOOK_SECRET=... to .env (openssl rand -hex 24)}
