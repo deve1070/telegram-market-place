@@ -1,0 +1,1737 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>Marketplace</title>
+    <style>
+      /* Design notes. Colours follow the person's Telegram theme (light/dark) so the app feels native; the one memorable
+   element comes from the subject: each shop gets a woven "tibeb" awning generated from its id, because shops have
+   no logos. Type is the system stack with Ethiopic fallbacks, prices use tabular figures. Motion only answers taps. */
+      :root {
+        --bg: var(--tg-theme-bg-color, #fff);
+        --surface: var(--tg-theme-secondary-bg-color, #f1f2f4);
+        --text: var(--tg-theme-text-color, #15191f);
+        --hint: var(--tg-theme-hint-color, #6b7280);
+        --accent: var(--tg-theme-button-color, #1d7a5a);
+        --accent-text: var(--tg-theme-button-text-color, #fff);
+        --link: var(--tg-theme-link-color, #1d7a5a);
+        --leaf: #1f8a63;
+        --saffron: #c98a0b;
+        --clay: #bd4330;
+        --line: rgba(128, 128, 128, 0.24);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Noto Sans Ethiopic",
+          "Nyala",
+          sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.4;
+      }
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .page {
+        padding: 0 16px calc(84px + env(safe-area-inset-bottom));
+      }
+      h1 {
+        font-size: 26px;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 18px 0 4px;
+      }
+      h2 {
+        font-size: 19px;
+        letter-spacing: -0.01em;
+        margin: 22px 0 10px;
+      }
+      .muted {
+        color: var(--hint);
+      }
+      .small {
+        font-size: 13px;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+      .top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .ghost {
+        background: none;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+
+      /* woven awning */
+      .awning {
+        --a: #1f6f5b;
+        --b: #e3b04b;
+        --c: #f2e8d0;
+        background:
+          linear-gradient(135deg, var(--c) 25%, transparent 25%) -7px 0/14px
+            14px,
+          linear-gradient(225deg, var(--c) 25%, transparent 25%) -7px 0/14px
+            14px,
+          linear-gradient(315deg, var(--c) 25%, transparent 25%) 0 0/14px 14px,
+          linear-gradient(45deg, var(--c) 25%, var(--a) 25%) 0 0/14px 14px;
+        border-bottom: 3px solid var(--b);
+      }
+      .band {
+        height: 16px;
+        margin: 0 -16px;
+      }
+
+      input[type="search"],
+      input[type="text"],
+      input[type="tel"],
+      select,
+      textarea {
+        width: 100%;
+        background: var(--surface);
+        border: 1px solid transparent;
+        border-radius: 12px;
+        padding: 12px 14px;
+        min-height: 44px;
+      }
+      textarea {
+        resize: vertical;
+        min-height: 70px;
+      }
+      .search {
+        margin: 14px 0 6px;
+      }
+
+      /* shops: flat stall rows */
+      .stall {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 14px 0;
+      }
+      .tile {
+        flex: none;
+        width: 58px;
+        height: 58px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+      }
+      .tile b {
+        background: var(--bg);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+      }
+      .stall .name {
+        font-weight: 650;
+        font-size: 16px;
+      }
+      .chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+      .chip {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+      }
+      .chip.ok {
+        color: var(--leaf);
+        border-color: var(--leaf);
+      }
+      .chip.gold {
+        color: var(--saffron);
+        border-color: var(--saffron);
+      }
+
+      /* shop page */
+      .cats {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        margin: 14px -16px 8px;
+        padding: 0 16px;
+        scrollbar-width: none;
+      }
+      .cats::-webkit-scrollbar {
+        display: none;
+      }
+      .cat {
+        flex: none;
+        background: var(--surface);
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 14px;
+      }
+      .cat[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accent-text);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px 12px;
+        margin-top: 10px;
+      }
+      .pcard {
+        background: none;
+        border: 0;
+        padding: 0;
+        text-align: left;
+      }
+      .pimg {
+        aspect-ratio: 1;
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface);
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+      .pimg img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .pimg.awning {
+        font-size: 34px;
+        font-weight: 700;
+        color: var(--bg);
+      }
+      .pt {
+        margin-top: 8px;
+        font-size: 14px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .price {
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .price small {
+        font-weight: 500;
+        color: var(--hint);
+        font-size: 12px;
+      }
+
+      .btn {
+        display: block;
+        width: 100%;
+        border: 0;
+        border-radius: 12px;
+        padding: 13px;
+        background: var(--accent);
+        color: var(--accent-text);
+        font-weight: 650;
+        min-height: 46px;
+      }
+      .btn.alt {
+        background: var(--surface);
+        color: var(--text);
+      }
+      .btn.danger {
+        background: none;
+        color: var(--clay);
+        border: 1px solid var(--clay);
+      }
+      .btn[disabled] {
+        opacity: 0.5;
+      }
+      .stepper {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--surface);
+        border-radius: 12px;
+      }
+      .stepper button {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        background: none;
+        font-size: 20px;
+      }
+      .stepper span {
+        min-width: 28px;
+        text-align: center;
+        font-weight: 650;
+      }
+      .line {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .line .pimg {
+        width: 60px;
+        flex: none;
+      }
+      .grow {
+        flex: 1;
+        min-width: 0;
+      }
+      .field {
+        margin: 12px 0;
+      }
+      .field label {
+        display: block;
+        font-size: 13px;
+        color: var(--hint);
+        margin-bottom: 6px;
+      }
+      .opt {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 8px;
+      }
+      .opt input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--accent);
+      }
+      .sum {
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 14px;
+        margin-top: 16px;
+      }
+      .sum div {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+      }
+      .sum .t {
+        font-weight: 700;
+        font-size: 17px;
+        border-top: 1px solid var(--line);
+        margin-top: 6px;
+        padding-top: 9px;
+      }
+      .err {
+        color: var(--clay);
+        font-size: 14px;
+        margin-top: 10px;
+      }
+      .order {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        margin: 12px 0;
+        overflow: hidden;
+      }
+      .order .in {
+        padding: 12px 14px;
+      }
+      .order .band {
+        margin: 0;
+        height: 10px;
+      }
+      .status {
+        font-size: 12px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--surface);
+      }
+      .stars button {
+        background: none;
+        border: 0;
+        font-size: 28px;
+        padding: 2px;
+        color: var(--hint);
+      }
+      .stars button.on {
+        color: var(--saffron);
+      }
+      .empty {
+        text-align: center;
+        padding: 48px 8px;
+      }
+      .empty p {
+        margin: 6px 0 16px;
+      }
+      .tabs {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        background: var(--bg);
+        border-top: 1px solid var(--line);
+        padding-bottom: env(safe-area-inset-bottom);
+        z-index: 5;
+      }
+      .tabs button {
+        flex: 1;
+        background: none;
+        border: 0;
+        padding: 9px 0 8px;
+        font-size: 12px;
+        color: var(--hint);
+        display: grid;
+        justify-items: center;
+        gap: 2px;
+        position: relative;
+      }
+      .tabs button[aria-current="page"] {
+        color: var(--accent);
+        font-weight: 650;
+      }
+      .tabs svg {
+        width: 23px;
+        height: 23px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .dot {
+        position: absolute;
+        top: 4px;
+        left: calc(50% + 6px);
+        background: var(--clay);
+        color: #fff;
+        border-radius: 999px;
+        font-size: 11px;
+        min-width: 17px;
+        height: 17px;
+        display: grid;
+        place-items: center;
+        padding: 0 4px;
+        font-style: normal;
+      }
+      .toast {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+        background: var(--text);
+        color: var(--bg);
+        padding: 12px 14px;
+        border-radius: 12px;
+        z-index: 9;
+        font-size: 14px;
+      }
+      .spin {
+        display: block;
+        margin: 40px auto;
+        width: 26px;
+        height: 26px;
+        border: 3px solid var(--line);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: s 0.8s linear infinite;
+      }
+      @keyframes s {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      [hidden] {
+        display: none !important;
+      }
+      /* used only when Telegram's own script could not be loaded: on-page stand-ins for the native Main and Back buttons */
+      .pmain {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(66px + env(safe-area-inset-bottom));
+        z-index: 6;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+      }
+      .pmain.busy {
+        opacity: 0.7;
+      }
+      .pback {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 6;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 50%;
+        background: var(--bg);
+        font-size: 22px;
+        line-height: 1;
+      }
+      .has-main .page {
+        padding-bottom: calc(140px + env(safe-area-inset-bottom));
+      }
+      .btn:active,
+      .stall:active,
+      .pcard:active {
+        transform: scale(0.985);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+        .btn:active,
+        .stall:active,
+        .pcard:active {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"><span class="spin" role="status"></span></div>
+    <script>
+      /* Boot safety net: if anything goes wrong before the app is on screen, say so (with a Reload button) instead of staying blank. */
+      window.__rendered = false;
+      (function () {
+        function show(msg) {
+          if (window.__rendered) return;
+          var a = document.getElementById("app");
+          if (!a) return;
+          a.innerHTML =
+            '<div style="padding:32px 20px;font-family:system-ui,sans-serif"><h2 style="margin:0 0 8px">Could not start the app</h2><p style="color:#6b7280;word-break:break-word"></p><button style="padding:12px 18px;border:0;border-radius:12px;background:#1d7a5a;color:#fff;font-size:16px" onclick="location.reload()">Reload</button></div>';
+          a.querySelector("p").textContent = msg;
+        }
+        window.addEventListener("error", function (e) {
+          show((e && e.message) || "script error");
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          show(String((e.reason && e.reason.message) || e.reason));
+        });
+        setTimeout(function () {
+          show(
+            "Still loading after 12 seconds. Check your connection and reload.",
+          );
+        }, 12000);
+      })();
+    </script>
+    <script>
+      (async () => {
+        "use strict";
+        /* Telegram's helper script is loaded WITHOUT blocking the page. If it cannot be reached (slow or blocked network) the app falls back
+   to on-page buttons and reads the signed login data Telegram puts in the address (#tgWebAppData), so it still works. */
+        function polyfill() {
+          const q = new URLSearchParams(location.hash.replace(/^#/, ""));
+          try {
+            for (const [k, v] of Object.entries(
+              JSON.parse(q.get("tgWebAppThemeParams") || "{}"),
+            ))
+              document.documentElement.style.setProperty(
+                "--tg-theme-" + k.replace(/_/g, "-"),
+                v,
+              );
+          } catch (e) {
+            /* default colours */
+          }
+          const mk = (cls, text) => {
+            const b = document.createElement("button");
+            b.className = cls;
+            b.hidden = true;
+            b.textContent = text || "";
+            document.body.appendChild(b);
+            return b;
+          };
+          const mb = mk("btn pmain"),
+            bb = mk("ghost pback", "‹");
+          bb.setAttribute("aria-label", "Back");
+          let mfn = null,
+            bfn = null;
+          mb.addEventListener("click", () => mfn && mfn());
+          bb.addEventListener("click", () => bfn && bfn());
+          return {
+            initData: q.get("tgWebAppData") || "",
+            initDataUnsafe: {},
+            ready() {},
+            expand() {},
+            close() {
+              try {
+                window.close();
+              } catch (e) {
+                /* not allowed */
+              }
+            },
+            showConfirm: (m, cb) => cb(window.confirm(m)),
+            openLink: (u) => window.open(u, "_blank"),
+            HapticFeedback: { impactOccurred() {}, notificationOccurred() {} },
+            MainButton: {
+              show() {
+                mb.hidden = false;
+                document.body.classList.add("has-main");
+              },
+              hide() {
+                mb.hidden = true;
+                document.body.classList.remove("has-main");
+              },
+              setText(t) {
+                mb.textContent = t;
+              },
+              onClick(f) {
+                mfn = f;
+              },
+              offClick(f) {
+                if (mfn === f) mfn = null;
+              },
+              enable() {
+                mb.disabled = false;
+              },
+              disable() {
+                mb.disabled = true;
+              },
+              showProgress() {
+                mb.classList.add("busy");
+              },
+              hideProgress() {
+                mb.classList.remove("busy");
+              },
+            },
+            BackButton: {
+              show() {
+                bb.hidden = false;
+              },
+              hide() {
+                bb.hidden = true;
+              },
+              onClick(f) {
+                bfn = f;
+              },
+              offClick() {},
+            },
+          };
+        }
+        const sdkLoaded = await new Promise((res) => {
+          if (window.Telegram && window.Telegram.WebApp) return res(true);
+          let done = false;
+          const fin = (v) => {
+            if (!done) {
+              done = true;
+              res(v);
+            }
+          };
+          const sc = document.createElement("script");
+          sc.src = "https://telegram.org/js/telegram-web-app.js";
+          sc.onload = () => fin(true);
+          sc.onerror = () => fin(false);
+          document.head.appendChild(sc);
+          setTimeout(() => fin(false), 4000);
+        });
+        const tg =
+          (sdkLoaded && window.Telegram && window.Telegram.WebApp) || null;
+        const W = tg || polyfill();
+        W.ready();
+        W.expand();
+
+        /* ---------- text ---------- */
+        const TXT = {
+          en: {
+            shops: "Shops",
+            cart: "Cart",
+            orders: "Orders",
+            search: "Search",
+            searchShops: "Search shops",
+            all: "All",
+            verified: "Verified",
+            featured: "Featured",
+            reviews: "reviews",
+            noReviews: "No reviews yet",
+            noShops: "No shops are open yet",
+            noShopsHint: "Check back soon.",
+            noProducts: "Nothing here yet",
+            more: "Show more",
+            addToCart: "Add to cart",
+            soldOut: "Sold out",
+            inStock: "in stock",
+            viewCart: "View cart",
+            checkout: "Checkout",
+            cartEmpty: "Your cart is empty",
+            cartEmptyHint: "Pick a shop and add something you like.",
+            browse: "Browse shops",
+            replaceCart:
+              "Your cart has items from another shop. Start a new cart with this item?",
+            remove: "Remove",
+            phone: "Phone number",
+            phoneHint: "0911 22 33 44",
+            address: "Delivery address and landmark",
+            addressHint: "Bole, near Edna Mall, 3rd floor",
+            location: "Add my location",
+            locationDone: "Location added",
+            zone: "Delivery area",
+            payWith: "How would you like to pay?",
+            cod: "Cash on delivery",
+            subtotal: "Items",
+            delivery: "Delivery",
+            total: "Total",
+            free: "Free",
+            place: "Place order",
+            placing: "Placing order",
+            orderPlaced: "Order placed",
+            codNote:
+              "The seller will confirm it soon. We will message you in the chat.",
+            payNote:
+              "One more step: pay, then send the transaction reference in the chat. We just sent you the instructions.",
+            openChat: "Open chat",
+            done: "Done",
+            myOrders: "Your orders",
+            noOrders: "No orders yet",
+            noOrdersHint: "Orders you place will show up here.",
+            received: "I received it",
+            cancelOrder: "Cancel order",
+            sendProof: "Send payment proof",
+            rate: "Rate this order",
+            comment: "Add a comment (optional)",
+            sendReview: "Send review",
+            thanks: "Thank you for your review",
+            st_awaiting_payment: "Waiting for payment",
+            st_placed: "Placed",
+            st_accepted: "Accepted",
+            st_packed: "Packed",
+            st_shipped: "On the way",
+            st_delivered: "Delivered",
+            st_cancelled: "Cancelled",
+            payReview: "The seller is confirming your payment",
+            e_phone:
+              "Enter a valid Ethiopian phone number, like 0911 22 33 44.",
+            e_address:
+              "Add your address or a landmark so the seller can find you.",
+            e_stock:
+              "Not enough stock for {p}. Lower the quantity or remove it.",
+            e_zone: "Choose a delivery area.",
+            e_method: "Choose a payment method.",
+            e_shop_unavailable: "This shop is not available right now.",
+            e_shop_not_found: "This shop is not available right now.",
+            e_too_many_requests:
+              "Too many attempts. Wait a minute and try again.",
+            e_unauthorized: "Open this page from the Telegram bot to sign in.",
+            e_generic:
+              "Something went wrong. Check your connection and try again.",
+            e_items: "Your cart changed. Open it and try again.",
+            e_location: "Could not use that location.",
+            myShop: "My shop",
+            retry: "Try again",
+            e_bad_response:
+              "The server sent an unexpected answer. If you test through a free tunnel, open its address once in a browser and tap through the warning page.",
+            e_http_502: "The shop server is not reachable right now.",
+            e_http_500: "The shop server had a problem. Try again in a moment.",
+          },
+          am: {
+            shops: "ሱቆች",
+            cart: "ቅርጫት",
+            orders: "ትዕዛዞች",
+            search: "ፈልግ",
+            searchShops: "ሱቅ ፈልግ",
+            all: "ሁሉም",
+            verified: "የተረጋገጠ",
+            featured: "ተመራጭ",
+            reviews: "ግምገማዎች",
+            noReviews: "እስካሁን ግምገማ የለም",
+            noShops: "እስካሁን ክፍት ሱቅ የለም",
+            noShopsHint: "ቆይተው ይመለሱ።",
+            noProducts: "እዚህ እስካሁን ምንም የለም",
+            more: "ተጨማሪ አሳይ",
+            addToCart: "ወደ ቅርጫት ጨምር",
+            soldOut: "ተሽጦ አልቋል",
+            inStock: "በክምችት",
+            viewCart: "ቅርጫት ክፈት",
+            checkout: "ትዕዛዝ ጨርስ",
+            cartEmpty: "ቅርጫትዎ ባዶ ነው",
+            cartEmptyHint: "ሱቅ ይምረጡ እና የሚወዱትን ይጨምሩ።",
+            browse: "ሱቆችን ይመልከቱ",
+            replaceCart: "ቅርጫትዎ ከሌላ ሱቅ ዕቃ አለው። በዚህ ዕቃ አዲስ ቅርጫት ይጀመር?",
+            remove: "አስወግድ",
+            phone: "ስልክ ቁጥር",
+            address: "የመላኪያ አድራሻና ምልክት",
+            location: "ቦታዬን ጨምር",
+            locationDone: "ቦታ ተጨምሯል",
+            zone: "የመላኪያ ቦታ",
+            payWith: "እንዴት መክፈል ይፈልጋሉ?",
+            cod: "ሲደርስ በጥሬ ገንዘብ",
+            subtotal: "ዕቃዎች",
+            delivery: "መላኪያ",
+            total: "ጠቅላላ",
+            free: "ነጻ",
+            place: "ትዕዛዝ አስገባ",
+            placing: "ትዕዛዝ በመግባት ላይ",
+            orderPlaced: "ትዕዛዝ ገብቷል",
+            codNote: "ሻጩ በቅርቡ ያረጋግጣል። በቻት መልዕክት እንልካለን።",
+            payNote: "አንድ ደረጃ ቀርቷል፦ ይክፈሉና የግብይት ቁጥሩን በቻት ይላኩ። መመሪያው ተልኮልዎታል።",
+            openChat: "ቻት ክፈት",
+            done: "ተጠናቋል",
+            myOrders: "ትዕዛዞችዎ",
+            noOrders: "እስካሁን ትዕዛዝ የለም",
+            received: "ተቀብያለሁ",
+            cancelOrder: "ትዕዛዝ ሰርዝ",
+            sendProof: "የክፍያ ማረጋገጫ ላክ",
+            rate: "ትዕዛዙን ገምግም",
+            sendReview: "ግምገማ ላክ",
+            thanks: "ስለ ግምገማዎ እናመሰግናለን",
+            st_awaiting_payment: "ክፍያ በመጠበቅ ላይ",
+            st_placed: "ገብቷል",
+            st_accepted: "ተቀባይነት አግኝቷል",
+            st_packed: "ተጠቅልሏል",
+            st_shipped: "በመንገድ ላይ",
+            st_delivered: "ደርሷል",
+            st_cancelled: "ተሰርዟል",
+            payReview: "ሻጩ ክፍያዎን እያረጋገጠ ነው",
+            myShop: "ሱቄ",
+          },
+        };
+        let lang = "en";
+        const t = (k, v) =>
+          String((TXT[lang] && TXT[lang][k]) || TXT.en[k] || k).replace(
+            /\{(\w+)\}/g,
+            (_, n) => (v && v[n] != null ? v[n] : ""),
+          );
+        const esc = (s) =>
+          String(s == null ? "" : s).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+        const fmt = (n) =>
+          new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(n);
+        const money = (n) =>
+          `<span class="num">${fmt(n)}</span> <small>ETB</small>`;
+        const moneyText = (n) => `${fmt(n)} ETB`;
+
+        /* ---------- state ---------- */
+        const emptyCart = () => ({ shopId: null, shopName: "", items: [] });
+        function loadCart() {
+          try {
+            const c = JSON.parse(localStorage.getItem("cart.v1") || "null");
+            if (
+              c &&
+              Array.isArray(c.items) &&
+              c.items.every(
+                (i) =>
+                  Number.isInteger(i.id) &&
+                  Number.isInteger(i.qty) &&
+                  i.qty > 0 &&
+                  typeof i.price === "number",
+              )
+            )
+              return c;
+          } catch (e) {
+            /* storage unavailable or corrupt */
+          }
+          return emptyCart();
+        }
+        const S = {
+          me: null,
+          view: "shops",
+          stack: [],
+          shops: [],
+          shopQuery: "",
+          shop: null,
+          products: [],
+          cat: null,
+          q: "",
+          page: 0,
+          more: false,
+          reviews: null,
+          product: null,
+          qty: 1,
+          cart: loadCart(),
+          orders: null,
+          form: {
+            phone: "",
+            address: "",
+            zoneId: null,
+            method: null,
+            lat: null,
+            lng: null,
+          },
+          done: null,
+          error: "",
+          busy: false,
+          fatal: "",
+          review: { open: null, stars: 0 },
+        };
+        const saveCart = () => {
+          try {
+            localStorage.setItem("cart.v1", JSON.stringify(S.cart));
+          } catch (e) {
+            /* private mode */
+          }
+        };
+        const cartCount = () => S.cart.items.reduce((n, i) => n + i.qty, 0);
+        const cartTotal = () =>
+          S.cart.items.reduce((n, i) => n + i.qty * i.price, 0);
+
+        /* ---------- api ---------- */
+        async function api(path, opts = {}) {
+          const form =
+            typeof FormData !== "undefined" && opts.form instanceof FormData; // file uploads send multipart, everything else JSON
+          const r = await fetch(path, {
+            method: opts.method || "GET",
+            headers: Object.assign(
+              {
+                "X-Telegram-Init-Data": W.initData || "",
+                "ngrok-skip-browser-warning": "1",
+              },
+              form ? {} : { "Content-Type": "application/json" },
+            ),
+            body: form
+              ? opts.form
+              : opts.body
+                ? JSON.stringify(opts.body)
+                : undefined,
+          });
+          let data = null;
+          try {
+            data = await r.json();
+          } catch (e) {
+            /* not json */
+          }
+          if (!r.ok || data === null) {
+            const err = new Error(
+              (data && data.error) ||
+                (r.ok ? "bad_response" : "http_" + r.status),
+            );
+            err.status = r.status;
+            err.data = data || {};
+            throw err;
+          }
+          return data;
+        }
+        const errText = (e) => {
+          const k = "e_" + (e && e.message);
+          const known = (TXT[lang] && TXT[lang][k]) || TXT.en[k];
+          return known ? t(k, { p: e.data && e.data.product }) : t("e_generic");
+        };
+        function toast(msg) {
+          const el = document.createElement("div");
+          el.className = "toast";
+          el.setAttribute("role", "status");
+          el.textContent = msg;
+          document.body.appendChild(el);
+          setTimeout(() => el.remove(), 3500);
+        }
+        function fail(e) {
+          if (e && e.status === 401) {
+            S.fatal = t("e_unauthorized");
+            draw();
+            return;
+          }
+          toast(errText(e));
+        }
+        const buzz = (k = "light") => {
+          try {
+            W.HapticFeedback && W.HapticFeedback.impactOccurred(k);
+          } catch (e) {
+            /* optional */
+          }
+        };
+
+        /* ---------- native buttons ---------- */
+        const hooks = {};
+        let mainFn = null;
+        function clearMain() {
+          if (mainFn) {
+            W.MainButton.offClick(mainFn);
+            mainFn = null;
+          }
+          W.MainButton.hide();
+        }
+        function setMain(text, fn, disabled) {
+          clearMain();
+          mainFn = fn;
+          W.MainButton.setText(text);
+          W.MainButton.onClick(fn);
+          disabled ? W.MainButton.disable() : W.MainButton.enable();
+          W.MainButton.show();
+        }
+        W.BackButton.onClick(() => back());
+
+        /* ---------- navigation ---------- */
+        function go(view) {
+          S.stack.push({ view: S.view, y: window.scrollY });
+          S.view = view;
+          S.error = "";
+          draw();
+          window.scrollTo(0, 0);
+        }
+        function back() {
+          const p = S.stack.pop();
+          if (!p) return;
+          S.view = p.view;
+          S.error = "";
+          draw();
+          window.scrollTo(0, p.y);
+        }
+        function tab(view) {
+          S.stack = [];
+          S.view = view;
+          S.error = "";
+          draw();
+          window.scrollTo(0, 0);
+          if (view === "orders") loadOrders();
+          if (hooks[view]) hooks[view]();
+        }
+
+        /* ---------- pieces ---------- */
+        const PALETTES = [
+          ["#1f6f5b", "#e3b04b", "#f3ead6"],
+          ["#2b3a8f", "#e58b3a", "#f0ece4"],
+          ["#7a1f3d", "#e7b64c", "#f3e6d6"],
+          ["#14606e", "#d98c5f", "#ece4d4"],
+          ["#3c5a2b", "#d9a441", "#f0e8d2"],
+          ["#5b2a86", "#e0a93b", "#eee4d9"],
+        ];
+        const awn = (id) => {
+          const p = PALETTES[Math.abs(Number(id) || 0) % PALETTES.length];
+          return `style="--a:${p[0]};--b:${p[1]};--c:${p[2]}"`;
+        };
+        const initial = (s) =>
+          esc((String(s || "?").trim()[0] || "?").toUpperCase());
+        const stars = (r) =>
+          "★".repeat(Math.round(r)) + "☆".repeat(5 - Math.round(r));
+        const ratingText = (s) =>
+          s.rating_count
+            ? `${stars(s.rating)} ${s.rating.toFixed(1)} (${s.rating_count})`
+            : t("noReviews");
+        const badges = (s) =>
+          `${s.verified ? `<span class="chip ok">✔ ${t("verified")}</span>` : ""}${s.featured ? `<span class="chip gold">${t("featured")}</span>` : ""}`;
+        const thumb = (p) =>
+          p.has_photo
+            ? `<div class="pimg"><img loading="lazy" alt="" src="/api/photo/${p.id}"></div>`
+            : `<div class="pimg awning" ${awn(p.shop_id)}>${initial(p.title)}</div>`;
+        const icon = {
+          seller: '<path d="M5 20v-9M12 20V4M19 20v-6"/>',
+          shops: '<path d="M4 9l1-5h14l1 5M4 9v11h16V9M4 9h16M9 20v-6h6v6"/>',
+          cart: '<path d="M3 4h2l2.4 11h10L20 7H6.5M9 20h.01M17 20h.01"/>',
+          orders: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/>',
+        };
+        function tabbar() {
+          const tabs = [
+            ["shops", t("shops")],
+            ["cart", t("cart")],
+            ["orders", t("orders")],
+          ];
+          if (S.me && S.me.is_seller && V.seller)
+            tabs.push(["seller", t("myShop")]);
+          const cur = ["shop", "product"].includes(S.view)
+            ? "shops"
+            : ["checkout", "done"].includes(S.view)
+              ? "cart"
+              : ["seller", "sprod"].includes(S.view)
+                ? "seller"
+                : S.view;
+          return `<nav class="tabs" aria-label="Main">${tabs
+            .map(
+              ([
+                v,
+                label,
+              ]) => `<button data-act="tab" data-v="${v}" ${cur === v ? 'aria-current="page"' : ""}>
+    <svg viewBox="0 0 24 24" aria-hidden="true">${icon[v]}</svg>${label}${v === "cart" && cartCount() ? `<i class="dot">${cartCount()}</i>` : ""}</button>`,
+            )
+            .join("")}</nav>`;
+        }
+        const langBtn = () =>
+          `<button class="ghost" data-act="lang" aria-label="Language">${lang === "en" ? "አማርኛ" : "English"}</button>`;
+        const empty = (title, hint, btn) =>
+          `<div class="empty"><h2>${title}</h2><p class="muted">${hint || ""}</p>${btn || ""}</div>`;
+
+        /* ---------- views ---------- */
+        const V = {
+          shops() {
+            clearMain();
+            const q = S.shopQuery.trim().toLowerCase();
+            return `<div class="page"><div class="top"><h1>${t("shops")}</h1>${langBtn()}</div>
+      <input id="shopq" class="search" type="search" placeholder="${t("searchShops")}" value="${esc(S.shopQuery)}" aria-label="${t("searchShops")}">
+      <div id="slist">${shopList(q)}</div></div>`;
+          },
+          shop() {
+            const d = S.shop;
+            if (!d) {
+              clearMain();
+              return `<div class="page"><span class="spin" role="status"></span></div>`;
+            }
+            const s = d.shop;
+            if (cartCount() && S.cart.shopId === s.id)
+              setMain(`${t("viewCart")} · ${fmt(cartTotal())} ETB`, () =>
+                tab("cart"),
+              );
+            else clearMain();
+            return `<div class="page"><div class="band awning" ${awn(s.id)}></div>
+      <h1>${esc(s.name)}</h1><div class="muted small">${esc(s.city)}</div>
+      <div class="chips">${badges(s)}</div>
+      <p class="small" style="margin:10px 0 0"><button class="ghost" data-act="reviews">${ratingText(s)}</button></p>
+      ${s.description ? `<p class="muted">${esc(s.description)}</p>` : ""}
+      <div id="revs">${reviewList()}</div>
+      <input id="q" class="search" type="search" placeholder="${t("search")}" value="${esc(S.q)}" aria-label="${t("search")}">
+      <div class="cats" role="group">${[{ id: null, name: t("all") }, ...d.categories].map((c) => `<button class="cat" data-act="cat" data-id="${c.id == null ? "" : c.id}" aria-pressed="${S.cat === c.id}">${esc(c.name)}</button>`).join("")}</div>
+      <div id="plist">${productGrid()}</div></div>`;
+          },
+          product() {
+            const p = S.product,
+              shop = S.shop && S.shop.shop;
+            const out = p.stock < 1;
+            if (out) setMain(t("soldOut"), () => {}, true);
+            else
+              setMain(`${t("addToCart")} · ${fmt(p.price * S.qty)} ETB`, () =>
+                addToCart(p, S.qty),
+              );
+            return `<div class="page">${p.has_photo ? `<div class="pimg" style="margin:0 -16px;border-radius:0"><img alt="" src="/api/photo/${p.id}"></div>` : `<div class="pimg awning" ${awn(p.shop_id)} style="margin:0 -16px;border-radius:0;aspect-ratio:2/1;font-size:56px">${initial(p.title)}</div>`}
+      <h1>${esc(p.title)}</h1><div class="price" style="font-size:22px">${money(p.price)}</div>
+      <p class="muted small">${out ? t("soldOut") : `${p.stock} ${t("inStock")}`}${shop ? `, ${esc(shop.name)}` : ""}</p>
+      ${p.description ? `<p>${esc(p.description)}</p>` : ""}
+      ${out ? "" : `<div class="stepper" role="group"><button data-act="pqty" data-d="-1" aria-label="−">−</button><span>${S.qty}</span><button data-act="pqty" data-d="1" aria-label="+">+</button></div>`}</div>`;
+          },
+          cart() {
+            const c = S.cart;
+            if (!c.items.length) {
+              clearMain();
+              return `<div class="page"><h1>${t("cart")}</h1>${empty(t("cartEmpty"), t("cartEmptyHint"), `<button class="btn alt" data-act="tab" data-v="shops">${t("browse")}</button>`)}</div>`;
+            }
+            setMain(
+              `${t("checkout")} · ${fmt(cartTotal())} ETB`,
+              startCheckout,
+            );
+            return `<div class="page"><h1>${t("cart")}</h1><div class="muted small">${esc(c.shopName)}</div>
+      ${c.items
+        .map(
+          (
+            i,
+          ) => `<div class="line">${thumb({ id: i.id, shop_id: c.shopId, title: i.title, has_photo: i.has_photo })}
+        <div class="grow"><div>${esc(i.title)}</div><div class="price">${money(i.price)}</div>
+          <button class="ghost small" data-act="rm" data-id="${i.id}" style="margin-top:6px">${t("remove")}</button></div>
+        <div class="stepper"><button data-act="cq" data-id="${i.id}" data-d="-1" aria-label="−">−</button><span>${i.qty}</span><button data-act="cq" data-id="${i.id}" data-d="1" aria-label="+">+</button></div></div>`,
+        )
+        .join("")}
+      <div class="sum"><div class="t"><span>${t("subtotal")}</span><span>${moneyText(cartTotal())}</span></div></div></div>`;
+          },
+          checkout() {
+            const d = S.shop,
+              f = S.form,
+              m = d.methods;
+            setMain(
+              S.busy ? t("placing") : `${t("place")} · ${fmt(grand())} ETB`,
+              placeOrder,
+              S.busy,
+            );
+            return `<div class="page"><h1>${t("checkout")}</h1>
+      <div class="field"><label for="f-phone">${t("phone")}</label><input id="f-phone" data-bind="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="${t("phoneHint")}" value="${esc(f.phone)}"></div>
+      <div class="field"><label for="f-address">${t("address")}</label><textarea id="f-address" data-bind="address" placeholder="${t("addressHint")}">${esc(f.address)}</textarea>
+        <button class="ghost" data-act="loc" style="margin-top:8px">${f.lat != null ? "✓ " + t("locationDone") : t("location")}</button></div>
+      ${d.zones.length ? `<div class="field"><label for="f-zone">${t("zone")}</label><select id="f-zone" data-bind="zoneId"><option value="">—</option>${d.zones.map((z) => `<option value="${z.id}" ${String(f.zoneId) === String(z.id) ? "selected" : ""}>${esc(z.name)} (${z.fee ? moneyText(z.fee) : t("free")})</option>`).join("")}</select></div>` : ""}
+      <h2>${t("payWith")}</h2>
+      ${m.cod ? `<label class="opt"><input type="radio" name="pay" data-bind="method" value="cod" ${f.method === "cod" ? "checked" : ""}>${t("cod")}</label>` : ""}
+      ${m.accounts.map((a) => `<label class="opt"><input type="radio" name="pay" data-bind="method" value="${a.id}" ${String(f.method) === String(a.id) ? "checked" : ""}>${esc(a.label)}</label>`).join("")}
+      <div class="sum" id="sum">${sumHtml()}</div><div class="err" id="err" role="alert">${esc(S.error)}</div></div>`;
+          },
+          done() {
+            const o = S.done;
+            setMain(o.next === "pay" ? t("openChat") : t("done"), () =>
+              o.next === "pay" ? W.close() : tab("orders"),
+            );
+            return `<div class="page"><div class="band awning" ${awn(S.shop ? S.shop.shop.id : 1)}></div><h1>${t("orderPlaced")}</h1>
+      <p class="price" style="font-size:20px">#${esc(o.order.code)}, ${money(o.order.total)}</p><p>${o.next === "pay" ? t("payNote") : t("codNote")}</p></div>`;
+          },
+          orders() {
+            clearMain();
+            if (!S.orders)
+              return `<div class="page"><h1>${t("myOrders")}</h1><span class="spin" role="status"></span></div>`;
+            if (!S.orders.length)
+              return `<div class="page"><h1>${t("myOrders")}</h1>${empty(t("noOrders"), t("noOrdersHint"))}</div>`;
+            return `<div class="page"><h1>${t("myOrders")}</h1>${S.orders.map(orderCard).join("")}</div>`;
+          },
+        };
+        function shopList(q) {
+          const list = S.shops.filter(
+            (s) =>
+              !q ||
+              s.name.toLowerCase().includes(q) ||
+              (s.city || "").toLowerCase().includes(q),
+          );
+          if (!list.length) return empty(t("noShops"), t("noShopsHint"));
+          return list
+            .map(
+              (
+                s,
+              ) => `<button class="stall" data-act="shop" data-id="${s.id}"><span class="tile awning" ${awn(s.id)}><b>${initial(s.name)}</b></span>
+    <span class="grow"><span class="name">${esc(s.name)}</span><span class="muted small" style="display:block">${esc(s.city)}</span>
+    <span class="chips">${badges(s)}<span class="chip">${ratingText(s)}</span></span></span></button>`,
+            )
+            .join("");
+        }
+        function productGrid() {
+          if (!S.products.length) return empty(t("noProducts"));
+          return `<div class="grid">${S.products
+            .map(
+              (
+                p,
+              ) => `<button class="pcard" data-act="product" data-id="${p.id}">${thumb(p)}
+    <div class="pt">${esc(p.title)}</div><div class="price">${money(p.price)}</div>${p.stock < 1 ? `<div class="muted small">${t("soldOut")}</div>` : ""}</button>`,
+            )
+            .join("")}</div>
+    ${S.more ? `<p><button class="btn alt" data-act="more">${t("more")}</button></p>` : ""}`;
+        }
+        function reviewList() {
+          if (!S.reviews) return "";
+          if (!S.reviews.length)
+            return `<p class="muted small">${t("noReviews")}</p>`;
+          return S.reviews
+            .map(
+              (r) =>
+                `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="small"><span style="color:var(--saffron)">${stars(r.rating)}</span> ${esc(r.name)}</div>${r.comment ? `<div>${esc(r.comment)}</div>` : ""}</div>`,
+            )
+            .join("");
+        }
+        function orderCard(o) {
+          const open = S.review.open === o.id;
+          const actions = [];
+          if (o.awaiting_payment)
+            actions.push(
+              `<button class="btn" data-act="pay" data-id="${o.id}">${t("sendProof")}</button>`,
+              `<button class="btn danger" data-act="cancel" data-id="${o.id}">${t("cancelOrder")}</button>`,
+            );
+          if (o.can_receive)
+            actions.push(
+              `<button class="btn" data-act="received" data-id="${o.id}">${t("received")}</button>`,
+            );
+          if (o.can_review)
+            actions.push(
+              open
+                ? `<div class="stars" role="group" aria-label="${t("rate")}">${[1, 2, 3, 4, 5].map((n) => `<button data-act="star" data-n="${n}" class="${n <= S.review.stars ? "on" : ""}" aria-label="${n}">★</button>`).join("")}</div>
+      <textarea id="rv-c" placeholder="${t("comment")}"></textarea><button class="btn" data-act="sendreview" data-id="${o.id}" style="margin-top:8px" ${S.review.stars ? "" : "disabled"}>${t("sendReview")}</button>`
+                : `<button class="btn alt" data-act="rate" data-id="${o.id}">${t("rate")}</button>`,
+            );
+          if (o.status === "awaiting_payment" && o.payment_status === "review")
+            actions.push(`<p class="muted small">${t("payReview")}</p>`);
+          return `<div class="order"><div class="band awning" ${awn(o.shop.id)}></div><div class="in">
+    <div class="top"><b>#${esc(o.code)}</b><span class="status">${t("st_" + o.status)}</span></div>
+    <div class="muted small">${esc(o.shop.name)}, ${new Date(o.created_at).toLocaleDateString(lang === "am" ? "am-ET" : "en-GB")}</div>
+    <div style="margin:8px 0">${o.items.map((i) => `<div class="small">${i.qty} × ${esc(i.title)}</div>`).join("")}</div>
+    <div class="small muted">${o.delivery_zone ? esc(o.delivery_zone) + ": " + (o.delivery_fee ? moneyText(o.delivery_fee) : t("free")) : ""}</div>
+    <div class="price">${t("total")} ${money(o.total)}</div><div style="display:grid;gap:8px;margin-top:10px">${actions.join("")}</div></div></div>`;
+        }
+        const deliveryFee = () => {
+          const z =
+            S.shop &&
+            S.shop.zones.find((z) => String(z.id) === String(S.form.zoneId));
+          return z ? z.fee : 0;
+        };
+        const grand = () => cartTotal() + deliveryFee();
+        function sumHtml() {
+          const z = S.shop && S.shop.zones.length;
+          return `<div><span>${t("subtotal")}</span><span>${moneyText(cartTotal())}</span></div>${z ? `<div><span>${t("delivery")}</span><span>${S.form.zoneId ? (deliveryFee() ? moneyText(deliveryFee()) : t("free")) : "—"}</span></div>` : ""}
+    <div class="t"><span>${t("total")}</span><span>${moneyText(grand())}</span></div>`;
+        }
+
+        /* ---------- drawing ---------- */
+        function draw() {
+          const app = document.getElementById("app");
+          window.__rendered = true;
+          if (S.fatal) {
+            clearMain();
+            app.innerHTML = `<div class="page">${empty(esc(S.fatal), "", S.fatalRetry ? `<button class="btn alt" onclick="location.reload()">${t("retry")}</button>` : "")}</div>`;
+            return;
+          }
+          app.innerHTML = V[S.view]() + tabbar();
+          document.documentElement.lang = lang;
+          if (S.stack.length) W.BackButton.show();
+          else W.BackButton.hide();
+        }
+        const setHtml = (id, html) => {
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = html;
+        };
+
+        /* ---------- loading ---------- */
+        async function openShop(id) {
+          S.shop = null;
+          S.products = [];
+          S.cat = null;
+          S.q = "";
+          S.page = 0;
+          S.reviews = null;
+          go("shop");
+          try {
+            const [d, p] = await Promise.all([
+              api("/api/shops/" + id),
+              api("/api/shops/" + id + "/products?page=0"),
+            ]);
+            S.shop = d;
+            S.products = p.items;
+            S.more = p.has_more;
+          } catch (e) {
+            fail(e);
+            back();
+            return;
+          }
+          if (S.view === "shop") draw();
+        }
+        async function loadProducts(reset) {
+          if (reset) {
+            S.page = 0;
+            S.products = [];
+          }
+          const qs = new URLSearchParams({ page: S.page });
+          if (S.cat != null) qs.set("cat", S.cat);
+          if (S.q.trim()) qs.set("q", S.q.trim());
+          try {
+            const p = await api(`/api/shops/${S.shop.shop.id}/products?${qs}`);
+            S.products = S.products.concat(p.items);
+            S.more = p.has_more;
+          } catch (e) {
+            fail(e);
+          }
+          setHtml("plist", productGrid());
+        }
+        async function loadOrders() {
+          try {
+            S.orders = (await api("/api/orders")).orders;
+          } catch (e) {
+            fail(e);
+            S.orders = S.orders || [];
+          }
+          if (S.view === "orders") draw();
+        }
+
+        /* ---------- cart + checkout ---------- */
+        async function addToCart(p, qty) {
+          const shop = S.shop.shop;
+          if (S.cart.items.length && S.cart.shopId !== p.shop_id) {
+            const ok = await new Promise((res) =>
+              W.showConfirm
+                ? W.showConfirm(t("replaceCart"), res)
+                : res(window.confirm(t("replaceCart"))),
+            );
+            if (!ok) return;
+            S.cart = emptyCart();
+          }
+          const cart = S.cart;
+          cart.shopId = p.shop_id;
+          cart.shopName = shop.name;
+          const line = cart.items.find((i) => i.id === p.id);
+          const next = Math.min((line ? line.qty : 0) + qty, p.stock);
+          if (line) line.qty = next;
+          else
+            cart.items.push({
+              id: p.id,
+              title: p.title,
+              price: p.price,
+              qty: next,
+              stock: p.stock,
+              has_photo: p.has_photo,
+            });
+          saveCart();
+          buzz();
+          back();
+          toast(`✓ ${p.title}`);
+        }
+        function startCheckout() {
+          if (!S.form.phone) S.form.phone = (S.me && S.me.phone) || "";
+          const proceed = () => {
+            const m = S.shop.methods;
+            if (!S.form.method)
+              S.form.method = m.cod
+                ? "cod"
+                : m.accounts[0]
+                  ? String(m.accounts[0].id)
+                  : null;
+            go("checkout");
+          };
+          if (S.shop && S.shop.shop.id === S.cart.shopId) return proceed();
+          api("/api/shops/" + S.cart.shopId)
+            .then((d) => {
+              S.shop = d;
+              proceed();
+            })
+            .catch(fail);
+        }
+        function setErr(msg) {
+          S.error = msg;
+          setHtml("err", esc(msg));
+        }
+        async function placeOrder() {
+          if (S.busy) return;
+          const f = S.form;
+          if (f.phone.replace(/\D/g, "").length < 9) {
+            setErr(t("e_phone"));
+            return;
+          }
+          if (!f.address.trim()) {
+            setErr(t("e_address"));
+            return;
+          }
+          if (S.shop.zones.length && !f.zoneId) {
+            setErr(t("e_zone"));
+            return;
+          }
+          if (!f.method) {
+            setErr(t("e_method"));
+            return;
+          }
+          S.busy = true;
+          setErr("");
+          setMain(t("placing"), placeOrder, true);
+          if (W.MainButton.showProgress) W.MainButton.showProgress();
+          try {
+            const body = {
+              shop_id: S.cart.shopId,
+              items: S.cart.items.map((i) => ({ id: i.id, qty: i.qty })),
+              phone: f.phone,
+              address: f.address,
+              zone_id: f.zoneId ? Number(f.zoneId) : null,
+              method: f.method === "cod" ? "cod" : Number(f.method),
+            };
+            if (f.lat != null) {
+              body.lat = f.lat;
+              body.lng = f.lng;
+            }
+            const res = await api("/api/checkout", { method: "POST", body });
+            S.cart = emptyCart();
+            saveCart();
+            S.done = res;
+            S.orders = null;
+            S.stack = [];
+            S.view = "done";
+            try {
+              W.HapticFeedback &&
+                W.HapticFeedback.notificationOccurred("success");
+            } catch (e) {
+              /* optional */
+            }
+          } catch (e) {
+            S.busy = false;
+            if (W.MainButton.hideProgress) W.MainButton.hideProgress();
+            if (e.status === 401) return fail(e);
+            setErr(errText(e));
+            setMain(`${t("place")} · ${fmt(grand())} ETB`, placeOrder);
+            return;
+          }
+          S.busy = false;
+          if (W.MainButton.hideProgress) W.MainButton.hideProgress();
+          draw();
+        }
+
+        /* ---------- actions ---------- */
+        const A = {
+          tab: (el) => tab(el.dataset.v),
+          lang: async () => {
+            lang = lang === "en" ? "am" : "en";
+            draw();
+            try {
+              await api("/api/lang", {
+                method: "POST",
+                body: { language: lang },
+              });
+            } catch (e) {
+              /* cosmetic */
+            }
+          },
+          shop: (el) => openShop(Number(el.dataset.id)),
+          product: (el) => {
+            S.product = S.products.find((p) => p.id === Number(el.dataset.id));
+            S.qty = 1;
+            go("product");
+          },
+          cat: (el) => {
+            S.cat = el.dataset.id === "" ? null : Number(el.dataset.id);
+            document
+              .querySelectorAll(".cat")
+              .forEach((b) => b.setAttribute("aria-pressed", String(b === el)));
+            loadProducts(true);
+          },
+          more: () => {
+            S.page += 1;
+            loadProducts(false);
+          },
+          reviews: async () => {
+            if (S.reviews) {
+              S.reviews = null;
+              setHtml("revs", "");
+              return;
+            }
+            try {
+              S.reviews = (
+                await api(`/api/shops/${S.shop.shop.id}/reviews`)
+              ).reviews;
+            } catch (e) {
+              return fail(e);
+            }
+            setHtml("revs", reviewList());
+          },
+          pqty: (el) => {
+            S.qty = Math.max(
+              1,
+              Math.min(S.product.stock, S.qty + Number(el.dataset.d)),
+            );
+            draw();
+          },
+          cq: (el) => {
+            const i = S.cart.items.find((x) => x.id === Number(el.dataset.id));
+            if (!i) return;
+            i.qty = Math.max(
+              1,
+              Math.min(i.stock, i.qty + Number(el.dataset.d)),
+            );
+            saveCart();
+            draw();
+          },
+          rm: (el) => {
+            S.cart.items = S.cart.items.filter(
+              (x) => x.id !== Number(el.dataset.id),
+            );
+            if (!S.cart.items.length) S.cart = emptyCart();
+            saveCart();
+            draw();
+          },
+          loc: (el) => {
+            if (!navigator.geolocation) return toast(t("e_location"));
+            navigator.geolocation.getCurrentPosition(
+              (p) => {
+                S.form.lat = p.coords.latitude;
+                S.form.lng = p.coords.longitude;
+                el.textContent = "✓ " + t("locationDone");
+              },
+              () => toast(t("e_location")),
+              { timeout: 10000 },
+            );
+          },
+          received: async (el) => {
+            try {
+              await api(`/api/orders/${el.dataset.id}/received`, {
+                method: "POST",
+              });
+              S.review = { open: Number(el.dataset.id), stars: 0 };
+              await loadOrders();
+            } catch (e) {
+              fail(e);
+            }
+          },
+          cancel: async (el) => {
+            try {
+              await api(`/api/orders/${el.dataset.id}/cancel`, {
+                method: "POST",
+              });
+              await loadOrders();
+            } catch (e) {
+              fail(e);
+            }
+          },
+          pay: async (el) => {
+            try {
+              await api(`/api/orders/${el.dataset.id}/pay`, { method: "POST" });
+              W.close();
+            } catch (e) {
+              fail(e);
+            }
+          },
+          rate: (el) => {
+            S.review = { open: Number(el.dataset.id), stars: 0 };
+            draw();
+          },
+          star: (el) => {
+            S.review.stars = Number(el.dataset.n);
+            const c = document.getElementById("rv-c");
+            const keep = c ? c.value : "";
+            draw();
+            const c2 = document.getElementById("rv-c");
+            if (c2) c2.value = keep;
+          },
+          sendreview: async (el) => {
+            const c = document.getElementById("rv-c");
+            try {
+              await api(`/api/orders/${el.dataset.id}/review`, {
+                method: "POST",
+                body: { rating: S.review.stars, comment: c ? c.value : "" },
+              });
+              S.review = { open: null, stars: 0 };
+              toast(t("thanks"));
+              await loadOrders();
+            } catch (e) {
+              fail(e);
+            }
+          },
+        };
+        const ask = (msg) =>
+          new Promise((res) =>
+            W.showConfirm ? W.showConfirm(msg, res) : res(window.confirm(msg)),
+          );
+        window.__app = {
+          S,
+          V,
+          A,
+          TXT,
+          W,
+          api,
+          t,
+          esc,
+          fmt,
+          money,
+          moneyText,
+          draw,
+          go,
+          back,
+          tab,
+          setMain,
+          clearMain,
+          toast,
+          fail,
+          awn,
+          initial,
+          thumb,
+          setHtml,
+          hooks,
+          ask,
+          buzz,
+          get lang() {
+            return lang;
+          },
+        };
+        const app = document.getElementById("app");
+        app.addEventListener("click", (e) => {
+          const el = e.target.closest("[data-act]");
+          if (el && A[el.dataset.act]) A[el.dataset.act](el, e);
+        });
+        function refreshTotals() {
+          setHtml("sum", sumHtml());
+          setMain(`${t("place")} · ${fmt(grand())} ETB`, placeOrder, S.busy);
+        }
+        app.addEventListener("input", (e) => {
+          const el = e.target;
+          if (el.dataset.bind === "phone" || el.dataset.bind === "address")
+            S.form[el.dataset.bind] = el.value;
+          if (el.id === "shopq") {
+            S.shopQuery = el.value;
+            setHtml("slist", shopList(el.value.trim().toLowerCase()));
+          }
+          if (el.id === "q") {
+            S.q = el.value;
+            clearTimeout(S.qt);
+            S.qt = setTimeout(() => loadProducts(true), 300);
+          }
+        });
+        app.addEventListener("change", (e) => {
+          const el = e.target;
+          if (el.dataset.bind === "method") S.form.method = el.value;
+          if (el.dataset.bind === "zoneId") {
+            S.form.zoneId = el.value || null;
+            refreshTotals();
+          }
+        });
+        document.addEventListener(
+          "error",
+          (e) => {
+            const img = e.target;
+            if (img && img.tagName === "IMG" && img.parentElement) {
+              const box = img.parentElement;
+              box.classList.add("awning");
+              box.removeAttribute("style");
+              img.remove();
+            }
+          },
+          true,
+        );
+
+        /* ---------- start ---------- */
+        (async function start() {
+          if (!W.initData) {
+            S.fatal = t("e_unauthorized");
+            draw();
+            return;
+          }
+          try {
+            S.me = await api("/api/me");
+            lang = S.me.language === "am" ? "am" : "en";
+            S.shops = (await api("/api/shops")).shops;
+          } catch (e) {
+            S.fatal = e && e.status === 401 ? t("e_unauthorized") : errText(e);
+            S.fatalRetry = !(e && e.status === 401);
+            draw();
+            return;
+          }
+          if (S.me.is_seller) {
+            // the dashboard is a separate file that only sellers download (never allowed to hold up the shop)
+            const load = new Promise((ok) => {
+              const sc = document.createElement("script");
+              sc.src = "/app/seller.js";
+              sc.onload = ok;
+              sc.onerror = ok;
+              document.head.appendChild(sc);
+            });
+            await Promise.race([
+              load,
+              new Promise((ok) => setTimeout(ok, 5000)),
+            ]);
+          }
+          draw();
+          if (
+            new URLSearchParams(location.search).get("view") === "seller" &&
+            V.seller
+          ) {
+            tab("seller");
+            return;
+          }
+          // deep links: /app?shop=<id>   or   t.me/<bot>/<app>?startapp=shop_<slug>
+          const param =
+            new URLSearchParams(location.search).get("shop") ||
+            ((W.initDataUnsafe && W.initDataUnsafe.start_param) || "").replace(
+              /^shop_/,
+              "",
+            );
+          const wanted = S.shops.find(
+            (s) => String(s.id) === param || s.slug === param,
+          );
+          if (wanted) openShop(wanted.id);
+        })();
+      })();
+    </script>
+  </body>
+</html>
